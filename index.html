@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nishi Express</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0f0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nishi Express">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&family=Boogaloo&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -203,6 +211,49 @@ h1,h2{letter-spacing:.5px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
 @keyframes flashA{0%{opacity:.5}100%{opacity:0}}
 #app.shake{animation:shk .45s}
 @keyframes shk{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
+/* ===== landscape layout, HUD over the world ===== */
+#app{max-width:none}
+@supports(height:100dvh){#app{height:100dvh}}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.screen:not(#PLAYING){width:100%;max-width:980px;margin:0 auto}
+#PLAYING{padding:0;gap:0;overflow:hidden}
+#PLAYING .scene{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;background:#0b0b17}
+#PLAYING .glass{backdrop-filter:none;background-color:rgba(10,10,22,.55)}
+.hud{position:absolute;z-index:2}
+.tl{top:calc(8px + env(safe-area-inset-top));left:8px;width:min(250px,38vw);display:flex;flex-direction:column;gap:6px}
+.tl .tasks{padding:8px 10px}
+.tr{top:calc(8px + env(safe-area-inset-top));right:8px;width:min(210px,32vw);display:flex;flex-direction:column;gap:6px}
+.tr .clock{width:auto;flex-direction:row;gap:8px;justify-content:center;padding:5px 10px}
+.loc{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:calc(10px + env(safe-area-inset-bottom));padding:5px 16px;font:400 15px var(--head);z-index:2}
+#PLAYING .stick{position:absolute;left:calc(16px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));width:120px;height:120px;z-index:2;background:radial-gradient(circle,rgba(19,19,28,.5) 55%,rgba(255,255,255,.08))}
+#PLAYING .acts{position:absolute;right:calc(16px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:2}
+.banner{left:0;right:0;margin:0 auto;width:min(440px,84%);top:18%}
+.mini{max-width:430px;margin:0 auto}
+#rot{display:none;position:absolute;inset:0;z-index:50;background:#0a0a18;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px}
+#rot b{font:400 26px var(--head)}#rot span{color:var(--muted)}
+#rot .ph{font-size:64px;animation:rotph 2.4s ease-in-out infinite}
+@keyframes rotph{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (max-width:700px){#rot{display:flex}}
+@media (orientation:landscape){
+  .screen{padding:10px 20px;gap:8px}
+  #LOBBY.on{display:grid;grid-template-columns:1.1fr 1fr;column-gap:26px;align-content:center;align-items:center}
+  #LOBBY .logo{grid-column:1;grid-row:1/span 4;margin:0}
+  #LOBBY .card,#LOBBY #startBtn,#LOBBY .label{grid-column:2}
+  #LOBBY .spacer{display:none}
+  .grid{grid-template-columns:repeat(6,1fr);gap:6px}
+}
+@media (orientation:landscape) and (max-height:520px){
+  .pcard{padding:6px 2px 5px}.pcard>b{font-size:12px;margin-top:2px}
+  .fig{transform:scale(.8);transform-origin:top center;margin-bottom:-11px}
+  .mhead{margin-top:0}.mhead h2{font-size:20px}.mhint2{display:none}
+  .case2{padding:6px 10px;font-size:12px}.case2>b{margin-bottom:3px;font-size:13px}
+  .screen button{padding:10px 18px;font-size:16px}
+  .badge{width:84px;height:84px;font-size:42px}.reveal{gap:8px}.reveal h2{font-size:28px}.reveal p{font-size:13px;max-width:420px}
+  #BOARDING>button,#GAME_OVER>button{align-self:center;width:260px}
+  .result{padding:8px;font-size:18px}
+  .logo .art{max-height:92px}.logo h1{font-size:32px}.logo p{font-size:12px}
+  .card{padding:10px}
+}
 </style>
 </head>
 <body>
@@ -255,22 +306,18 @@ h1,h2{letter-spacing:.5px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
 
   <!-- PLAYING -->
   <section class="screen" id="PLAYING">
-    <div class="topbar">
-      <div class="tasks glass">
-        <div class="tbar"><i id="taskFill"></i><b id="taskTxt">TASKS 0/3</b></div>
-        <ul id="taskList"></ul>
-      </div>
-      <div class="clock glass" id="clockBox"><span>Arrive in</span><b id="clockTxt">2:30</b></div>
-    </div>
-    <div class="case glass" id="caseBar" hidden><b>🔎 Case Board</b><div id="caseList"></div></div>
-    <div class="route"><div class="rt"><i id="barFill"></i><u id="pin">🚂</u></div><span class="flag">🏁</span></div>
     <canvas class="scene" id="scene" width="800" height="720"></canvas>
-    <div class="deck">
-      <div class="stick" id="stick"><i id="knob"></i></div>
-      <div class="acts">
-        <button class="act use" id="useBtn" disabled><span>🛠️</span><em>USE</em></button>
-      </div>
+    <div class="hud tl">
+      <div class="tasks glass"><div class="tbar"><i id="taskFill"></i><b id="taskTxt">TASKS 0/3</b></div><ul id="taskList"></ul></div>
+      <div class="case glass" id="caseBar" hidden><b>🔎 Case Board</b><div id="caseList"></div></div>
     </div>
+    <div class="hud tr">
+      <div class="clock glass" id="clockBox"><span>Arrive in</span><b id="clockTxt">2:30</b></div>
+      <div class="route"><div class="rt"><i id="barFill"></i><u id="pin">🚂</u></div><span class="flag">🏁</span></div>
+    </div>
+    <div class="loc glass" id="locName"></div>
+    <div class="stick" id="stick"><i id="knob"></i></div>
+    <div class="acts"><button class="act use" id="useBtn" disabled><span>🛠️</span><em>USE</em></button></div>
     <div class="panel" id="panel" hidden></div>
     <div class="banner" id="banner" hidden></div>
   </section>
@@ -308,6 +355,7 @@ h1,h2{letter-spacing:.5px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
   </section>
 
   <div class="flash" id="flash"></div>
+  <div id="rot"><div class="ph">📱</div><b>Rotate your phone</b><span>Nishi Express is played in landscape</span></div>
 </div>
 
 <script>
@@ -355,12 +403,17 @@ COLORS.forEach((c,i)=>{
 });
 $('nameInput').value=profile.name;
 $('nameInput').oninput=e=>{profile.name=e.target.value.trim();save();};
-$('startBtn').onclick=()=>go('BOARDING');
+function goFull(){                                          // on phones: go full screen and ask for landscape
+  try{if(!matchMedia('(pointer:coarse)').matches||document.fullscreenElement)return;
+    const e=document.documentElement;Promise.resolve(e.requestFullscreen&&e.requestFullscreen()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}
+}
+$('startBtn').onclick=()=>{goFull();go('BOARDING');};
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 
 /* ===== TRAIN: logic (top-down) ===== */
 const CARS=['Canteen','General','Luggage Van'],N=CARS.length;
-const CW=440,GAP=26,FT=112,FB=282,DT=170,DB=226,VW=400,VH=360,GOLD='#FFD700';
+const CW=440,GAP=26,FT=112,FB=282,DT=170,DB=226,VH=360,GOLD='#FFD700';
+let VW=400;
 const WORLD_W=N*CW+(N-1)*GAP,cx0=i=>i*(CW+GAP);
 const G={x:60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,meetAt:0,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,scarf:'#f5f6fa'};
 let role='PASSENGER',nearId=null;
@@ -502,10 +555,10 @@ function person(x,y,col,cap){
 }
 function draw(){
   const camx=Math.max(-20,Math.min(WORLD_W-VW+20,G.x-VW/2));
-  cx.setTransform(2,0,0,2,0,0);
+  cx.setTransform(cv.height/VH,0,0,cv.height/VH,0,0);
   cx.fillStyle='#0b0b17';cx.fillRect(0,0,VW,VH);
   cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=2;
-  for(let i=0;i<16;i++){const x=((i*83-G.t*340)%560+560)%560-80,y=i%2?20+(i*13)%34:306+(i*17)%44;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+46,y);cx.stroke();}
+  for(let i=0;i<26;i++){const x=((i*83-G.t*340)%(VW+160)+(VW+160))%(VW+160)-80,y=i%2?20+(i*13)%34:306+(i*17)%44;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+46,y);cx.stroke();}
   cx.textAlign='center';
   CARS.forEach((name,i)=>{
     const x0=cx0(i)-camx;if(x0>VW+30||x0+CW<-30)return;
@@ -569,7 +622,7 @@ function draw(){
 
 /* ===== TRAIN: input and loop ===== */
 const K={l:0,r:0,u:0,d:0},KM={ArrowLeft:'l',a:'l',ArrowRight:'r',d:'r',ArrowUp:'u',w:'u',ArrowDown:'d',s:'d'};
-let sid=null,raf=0,last=0;
+let sid=null,raf=0,last=0,lastLoc='';
 function keyDir(){if(sid===null){G.dx=K.r-K.l;G.dy=K.d-K.u;}}
 addEventListener('keydown',e=>{if(KM[e.key]){K[KM[e.key]]=1;keyDir();}});
 addEventListener('keyup',e=>{if(KM[e.key]){K[KM[e.key]]=0;keyDir();}});
@@ -586,11 +639,17 @@ stick.onpointerdown=e=>{e.preventDefault();sid=e.pointerId;stick.setPointerCaptu
 stick.onpointermove=e=>{if(e.pointerId===sid)stickMove(e);};
 stick.onpointerup=stick.onpointercancel=resetStick;
 $('useBtn').onclick=()=>{const n=nearInter();if(!n||G.busy)return;if(n.k==='task')openTask(n.t);else if(n.k==='clue')collectClue(n.c,'You');else{G.chainUsed=true;go('MEETING');}};
-function startLoop(){if(raf)return;resetStick();last=performance.now();raf=requestAnimationFrame(tick);}
+function resize(){                                          // canvas fills the screen; the world is scaled to the screen height
+  const r=cv.getBoundingClientRect();if(!r.width||!r.height)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2);cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);VW=r.width*VH/r.height;
+}
+addEventListener('resize',()=>{if(state==='PLAYING')resize();});
+function startLoop(){if(raf)return;resize();resetStick();last=performance.now();raf=requestAnimationFrame(tick);}
 function tick(now){
   if(state!=='PLAYING'){raf=0;return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;
   update(dt);draw();
+  const ln=CARS[carOf(G.x)];if(ln!==lastLoc){lastLoc=ln;$('locName').textContent=ln;}
   const n=nearInter(),id=n?n.id:null;
   if(id!==nearId){nearId=id;const u=$('useBtn');u.disabled=!n;u.firstElementChild.textContent=n?n.icon:'🛠️';}
   $('barFill').style.width=(G.journey*100)+'%';$('pin').style.left=(G.journey*100)+'%';
@@ -677,7 +736,7 @@ function end(win){
 const M={people:[],iv:0,sel:null,votes:{},result:null};
 const people=()=>[{id:'you',name:profile.name||'You',hex:COLORS[profile.color],scarf:G.scarf,you:true},
   ...BOTS.map((b,i)=>({id:'b'+i,name:b.name,hex:COLORS[b.col],scarf:b.scarf,bot:b})).filter(p=>!p.bot.out)];
-const card=(p,cls)=>'<div class="pcard'+(cls||'')+'" data-id="'+p.id+'"><div class="fig" style="--c:'+p.hex+'"><i class="hd"></i><i class="bd"><u style="background:'+p.scarf+'"></u></i></div><b>'+p.name+(p.you?' (you)':'')+'</b><div class="vd"></div></div>';
+const card=(p,cls)=>'<div class="pcard'+(cls||'')+'" data-id="'+p.id+'"><div class="fig" style="--c:'+p.hex+'"><i class="hd"></i><i class="bd"><u style="background:'+p.scarf+'"></u></i></div><b>'+p.name+(p.you&&p.name!=='You'?' (you)':'')+'</b><div class="vd"></div></div>';
 const boardHtml=()=>G.board.length?G.board.map(c=>'<span class="cl"><i style="background:'+c.col+'"></i>Thread, '+CARS[c.car]+'</span>').join(''):'<span class="cl">No clues yet. Nothing to go on.</span>';
 function startTimer(key,total,onEnd){
   clearInterval(M.iv);let left=total;
@@ -748,6 +807,7 @@ $('confirmBtn').onclick=()=>finishVote(M.sel);
 $('skipBtn').onclick=()=>finishVote('skip');
 $('eBtn').onclick=afterVote;
 
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));   // makes the game installable
 go('LOBBY');
 </script>
 </body>
