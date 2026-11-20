@@ -518,7 +518,7 @@ function musicEl(){if(!MUS){MUS=new Audio('janalar_opare.mp3');MUS.loop=true;MUS
 function startMusic(){if(profile.mute||profile.music!==true)return;try{const r=musicEl().play();if(r&&r.catch)r.catch(()=>{});}catch(e){}}
 function stopMusic(){if(MUS)MUS.pause();}
 function askMusic(){                                           // a small note at the top when the game begins; the choice is remembered
-  if(profile.music!==undefined||askedMusic)return;askedMusic=true;$('musicAsk').hidden=false;
+  if(askedMusic||(MUS&&!MUS.paused))return;askedMusic=true;$('musicAsk').hidden=false;
   clearTimeout(askT);askT=setTimeout(()=>{$('musicAsk').hidden=true;},15000);
 }
 $('musicYes').onclick=()=>{profile.music=true;save();$('musicAsk').hidden=true;startMusic();};
@@ -980,7 +980,7 @@ function resetGame(){
   closePanel();
   Object.assign(G,{x:cx0(ix('General'))+60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,hold:null,boosts:[],inv:[],fallen:[],pushCd:0,fuelHint:false,clueHint:false,scarf:SCARF[Math.floor(Math.random()*SCARF.length)]});
   role=/crew/i.test(location.search)?'PASSENGER':(/chor/i.test(location.search)||Math.random()<1/6)?'CHOR':'PASSENGER';   // random: one of the six is the Chor (so about 1 game in 6 you are); add ?chor or ?crew to the address to force it
-  nearId=0;initBots();initLuggage();initFuel();G.gid=(G.gid||0)+1;$('pushBtn').hidden=role!=='CHOR';$('inv').hidden=role!=='CHOR';refreshInv();refreshFallen();refreshTasks();refreshBoard();$('banner').hidden=true;
+  nearId=0;initBots();initLuggage();initFuel();G.gid=(G.gid||0)+1;askedMusic=false;$('pushBtn').hidden=role!=='CHOR';$('inv').hidden=role!=='CHOR';refreshInv();refreshFallen();refreshTasks();refreshBoard();$('banner').hidden=true;
 }
 function showRole(){
   const c=role==='CHOR';
