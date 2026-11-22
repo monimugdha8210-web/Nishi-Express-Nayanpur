@@ -272,7 +272,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 @keyframes slideDown{from{transform:translateY(-30px);opacity:0}}
 /* ===== main page: the locomotive picture, title on top, PLAY below ===== */
 #lobbyBg{position:absolute;inset:0;z-index:0;display:none;background:#0b0b17 url(lobby.jpg) center 38%/cover no-repeat}
-#lobbyBg:after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(5,5,12,.66),rgba(5,5,12,.04) 44%,rgba(5,5,12,.12) 54%,rgba(5,5,12,.84))}
+#lobbyBg:after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(5,5,12,.6),rgba(5,5,12,.34) 45%,rgba(5,5,12,.5) 62%,rgba(5,5,12,.86))}
 body.inlobby #lobbyBg{display:block}
 body.inlobby #bg{display:none}
 #LOBBY.screen{max-width:none;padding:14px 22px calc(14px + env(safe-area-inset-bottom))}
@@ -287,8 +287,31 @@ body.inlobby #bg{display:none}
 .lb-bottom{display:flex;flex-direction:column;align-items:center;gap:10px}
 #LOBBY .play{width:min(340px,62vw);font-size:28px;padding:14px 20px;letter-spacing:2px}
 .lb-row{display:flex;gap:10px}
-.lb2{background:rgba(10,10,22,.62);border:1px solid var(--line);color:#8a8aa5;font-size:14px;padding:9px 18px;box-shadow:none;opacity:.75}
+.lb2{position:relative;background:rgba(10,10,22,.78);border:2px solid rgba(255,255,255,.32);color:#e8e8f6;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:11px 20px 11px 22px;min-width:190px;box-shadow:0 4px 0 rgba(0,0,0,.45);opacity:1;cursor:not-allowed}
+.lb2 i{position:absolute;top:-9px;right:10px;font:400 10px/1 var(--head);font-style:normal;letter-spacing:1px;padding:3px 7px;border-radius:20px;background:var(--gold);color:#2b1d00}
 #LOBBY .mute{top:auto;bottom:calc(14px + env(safe-area-inset-bottom));right:18px}
+#LOBBY.on{display:flex;flex-direction:column;justify-content:center;align-items:center}
+.lb-bar{position:absolute;top:calc(10px + env(safe-area-inset-top));left:20px;right:20px;display:flex;justify-content:space-between;align-items:center}
+.lb-ig{color:#ffd98a;font:900 14px var(--body);text-decoration:none;text-shadow:0 2px 6px rgba(0,0,0,.9)}
+.lb-gh{display:block;width:32px;height:32px}.lb-gh svg{width:100%;height:100%;fill:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
+.lb-center{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.lb-center h1{font:400 clamp(34px,7vw,60px)/1 var(--head);background:linear-gradient(180deg,#fff 35%,#ffd98a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.55));text-shadow:none}
+.lb-center p{color:#e2e2f4;font-size:clamp(12px,1.9vw,16px);text-shadow:0 2px 8px rgba(0,0,0,.9)}
+.lb-center small{color:#a8a8c6;font-size:11px;letter-spacing:2px;margin-top:6px;text-shadow:0 2px 6px rgba(0,0,0,.9)}
+.lb-btns{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:12px}
+.lb-btns button{width:min(340px,64vw)}
+#LOBBY .play{font-size:26px;padding:12px 20px;letter-spacing:2px}
+.lb2{background:rgba(10,10,22,.74);border:2px solid rgba(255,255,255,.35);color:#e8e8f6;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 20px;box-shadow:0 4px 0 rgba(0,0,0,.45);opacity:1;cursor:pointer}
+.sheet{margin:auto;width:min(440px,92%);display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:rgba(10,10,22,.8);border:1px solid var(--line);box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.sheet h2{text-align:center;font-size:24px}
+.sheet #nameInput{text-align:center}
+.sheet .colors{justify-content:center;gap:10px}
+.prev{display:flex;justify-content:center;height:82px;align-items:center}.prev .fig{transform:scale(1.4)}
+.row2{display:flex;justify-content:space-between;align-items:center;gap:12px;font:800 15px var(--body)}
+.tg{padding:8px 22px;font-size:15px;min-width:84px;box-shadow:none}
+.tg.off{background:#25253a;color:#8a8aa5}
+input[type=range]{width:52%;accent-color:#FF9F43}
+@media (max-height:420px){.sheet{padding:12px;gap:9px}.prev{height:66px}.prev .fig{transform:scale(1.15)}.sheet h2{font-size:21px}}
 </style>
 </head>
 <body>
@@ -298,18 +321,38 @@ body.inlobby #bg{display:none}
 
   <!-- LOBBY -->
   <section class="screen" id="LOBBY">
-    <div class="lb-top">
-      <div class="lb-title"><h1>Nishi Express</h1><p>The night is deep. The thief is inside.</p><small>by MugdhoMello · NOYONPURIAN GANG</small></div>
-      <div class="lb-card card">
-        <input id="nameInput" maxlength="14" placeholder="Your name" autocomplete="off">
-        <div class="colors" id="colors"></div>
+    <div class="lb-bar">
+      <a class="lb-ig" href="https://www.instagram.com/al_shah_mugdho/" target="_blank" rel="noopener">@al_shah_mugdho</a>
+      <a class="lb-gh" href="https://github.com/monimugdha8210-web/Nishi-Express-Nayanpur" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    </div>
+    <div class="lb-center">
+      <h1>Nishi Express</h1>
+      <p>The night is deep. The thief is inside.</p>
+      <div class="lb-btns">
+        <button class="cta play" id="startBtn">PLAY</button>
+        <button class="lb2" data-go="CUSTOMIZE">Customize avatar</button>
+        <button class="lb2" data-go="SETTINGS">Settings</button>
       </div>
+      <small>NOYONPURIAN GANG</small>
     </div>
-    <div class="lb-bottom">
-      <button class="cta play" id="startBtn">PLAY</button>
-      <div class="lb-row"><button class="lb2" disabled title="Coming soon">Customize avatar</button><button class="lb2" disabled title="Coming soon">Settings</button></div>
+  </section>
+  <section class="screen" id="CUSTOMIZE">
+    <div class="sheet">
+      <h2>Customize avatar</h2>
+      <div class="prev" id="avPrev"></div>
+      <input id="nameInput" maxlength="14" placeholder="Your name" autocomplete="off">
+      <div class="colors" id="colors"></div>
+      <button class="cta" data-go="LOBBY">Done</button>
     </div>
-    <button class="mute" id="muteBtn" aria-label="Sound on or off">🔊</button>
+  </section>
+  <section class="screen" id="SETTINGS">
+    <div class="sheet">
+      <h2>Settings</h2>
+      <div class="row2"><span>🎵 Music</span><button class="tg" id="tgMusic">OFF</button></div>
+      <div class="row2"><span>Music volume</span><input type="range" id="musicVol" min="0" max="100" step="1"></div>
+      <div class="row2"><span>🔔 Sound effects</span><button class="tg" id="tgSfx">ON</button></div>
+      <button class="cta" data-go="LOBBY">Back</button>
+    </div>
   </section>
 
   <!-- BOARDING (role reveal) -->
@@ -386,7 +429,7 @@ body.inlobby #bg{display:none}
 
 // State machine: one transition table. Anything not listed is blocked.
 const FLOW={
-  LOBBY:['BOARDING'], BOARDING:['PLAYING'], PLAYING:['MEETING','GAME_OVER'],
+  LOBBY:['BOARDING','CUSTOMIZE','SETTINGS'], CUSTOMIZE:['LOBBY'], SETTINGS:['LOBBY'], BOARDING:['PLAYING'], PLAYING:['MEETING','GAME_OVER'],
   MEETING:['VOTING','PLAYING'], VOTING:['EJECTION','PLAYING'],
   EJECTION:['PLAYING','GAME_OVER'], GAME_OVER:['LOBBY']
 };
@@ -411,7 +454,8 @@ const $=id=>document.getElementById(id);
 function render(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===state));
   document.documentElement.style.setProperty('--me',COLORS[profile.color]);
-  document.body.classList.toggle('playing',state==='PLAYING');document.body.classList.toggle('inlobby',state==='LOBBY');
+  document.body.classList.toggle('playing',state==='PLAYING');document.body.classList.toggle('inlobby',state==='LOBBY'||state==='CUSTOMIZE'||state==='SETTINGS');
+  if(state==='CUSTOMIZE')paintPrev();if(state==='SETTINGS')paintSettings();
   if(state==='PLAYING')askMusic();
   if(state==='PLAYING')startLoop();
 }
@@ -432,8 +476,6 @@ function goFull(){                                          // on phones: go ful
     const e=document.documentElement;Promise.resolve(e.requestFullscreen&&e.requestFullscreen()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}
 }
 $('startBtn').onclick=()=>{audio();goFull();go('BOARDING');startMusic();};
-const mb=$('muteBtn'),paintMute=()=>{mb.textContent=profile.mute?'🔇':'🔊';};paintMute();
-mb.onclick=()=>{profile.mute=!profile.mute;save();paintMute();if(profile.mute)stopMusic();else{audio();startMusic();}};   // the speaker button silences the siren and the music
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 
 /* ===== TRAIN: logic (top-down) ===== */
@@ -516,11 +558,11 @@ function banner(t,kind){
 }
 /* ===== MUSIC: the owner's song, asked for once at the start of the game ===== */
 const MUSIC_VOL=.3;let MUS=null,askedMusic=false,askT=0;
-function musicEl(){if(!MUS){MUS=new Audio('janalar_opare.mp3');MUS.loop=true;MUS.preload='none';}MUS.volume=MUSIC_VOL;return MUS;}   // the file is only downloaded after someone says yes
-function startMusic(){if(profile.mute||profile.music!==true)return;try{const r=musicEl().play();if(r&&r.catch)r.catch(()=>{});}catch(e){}}
+function musicEl(){if(!MUS){MUS=new Audio('janalar_opare.mp3');MUS.loop=true;MUS.preload='none';}MUS.volume=(profile.musicVol!==undefined?profile.musicVol:MUSIC_VOL);return MUS;}   // the file is only downloaded after someone says yes
+function startMusic(){if(profile.music!==true)return;try{const r=musicEl().play();if(r&&r.catch)r.catch(()=>{});}catch(e){}}
 function stopMusic(){if(MUS)MUS.pause();}
 function askMusic(){                                           // a small note at the top when the game begins; the choice is remembered
-  if(askedMusic||(MUS&&!MUS.paused))return;askedMusic=true;$('musicAsk').hidden=false;
+  if(profile.music!==undefined||askedMusic)return;askedMusic=true;$('musicAsk').hidden=false;
   clearTimeout(askT);askT=setTimeout(()=>{$('musicAsk').hidden=true;},15000);
 }
 $('musicYes').onclick=()=>{profile.music=true;save();$('musicAsk').hidden=true;startMusic();};
@@ -1078,6 +1120,12 @@ $('skipBtn').onclick=()=>finishVote('skip');
 $('eBtn').onclick=afterVote;
 
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));   // makes the game installable
+function paintPrev(){$('avPrev').innerHTML='<div class="fig" style="--c:'+COLORS[profile.color]+'"><i class="hd"></i><i class="bd"><u style="background:#f5f6fa"></u></i></div>';}
+const tgM=$('tgMusic'),tgS=$('tgSfx'),vol=$('musicVol');
+function paintSettings(){tgM.textContent=profile.music===true?'ON':'OFF';tgM.classList.toggle('off',profile.music!==true);tgS.textContent=profile.mute?'OFF':'ON';tgS.classList.toggle('off',!!profile.mute);vol.value=Math.round((profile.musicVol!==undefined?profile.musicVol:MUSIC_VOL)*100);}
+tgM.onclick=()=>{profile.music=!(profile.music===true);save();if(profile.music){audio();startMusic();}else stopMusic();paintSettings();};
+tgS.onclick=()=>{profile.mute=!profile.mute;save();if(!profile.mute)audio();paintSettings();};
+vol.oninput=()=>{profile.musicVol=vol.value/100;save();if(MUS)MUS.volume=profile.musicVol;};
 go('LOBBY');
 </script>
 </body>
