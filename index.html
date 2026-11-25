@@ -377,6 +377,7 @@ input[type=range]{width:52%;accent-color:#FF9F43}
       <div class="clock glass" id="clockBox"><span>Arrive in</span><b id="clockTxt">2:30</b></div>
       <div class="route"><div class="rt"><i id="barFill"></i><u id="pin">🚂</u></div><span class="flag">🏁</span></div>
       <div class="boost" id="boostTxt" hidden></div>
+      <div class="boost" id="waterTxt" hidden></div>
       <div class="fallen" id="fallen"></div>
     </div>
     <div class="inv" id="inv" hidden></div>
@@ -416,7 +417,8 @@ input[type=range]{width:52%;accent-color:#FF9F43}
       <p id="ovSub"></p>
       <div class="stats glass" id="ovStats"></div>
     </div>
-    <button class="cta" data-go="LOBBY">Play again</button>
+    <button class="cta" data-go="BOARDING">Play again</button>
+    <button class="lb2" data-go="LOBBY">Return to lobby</button>
   </section>
 
   <div class="flash" id="flash"></div>
@@ -431,7 +433,7 @@ input[type=range]{width:52%;accent-color:#FF9F43}
 const FLOW={
   LOBBY:['BOARDING','CUSTOMIZE','SETTINGS'], CUSTOMIZE:['LOBBY'], SETTINGS:['LOBBY'], BOARDING:['PLAYING'], PLAYING:['MEETING','GAME_OVER'],
   MEETING:['VOTING','PLAYING'], VOTING:['EJECTION','PLAYING'],
-  EJECTION:['PLAYING','GAME_OVER'], GAME_OVER:['LOBBY']
+  EJECTION:['PLAYING','GAME_OVER'], GAME_OVER:['LOBBY','BOARDING']
 };
 let state=null;
 function go(next){
@@ -456,6 +458,7 @@ function render(){
   document.documentElement.style.setProperty('--me',COLORS[profile.color]);
   document.body.classList.toggle('playing',state==='PLAYING');document.body.classList.toggle('inlobby',state==='LOBBY'||state==='CUSTOMIZE'||state==='SETTINGS');
   if(state==='CUSTOMIZE')paintPrev();if(state==='SETTINGS')paintSettings();
+  if(state==='PLAYING')startMusic();else if(state!=='MEETING'&&state!=='VOTING'&&state!=='EJECTION')stopMusic();   // music plays from the start of the game until it ends
   if(state==='PLAYING')askMusic();
   if(state==='PLAYING')startLoop();
 }
@@ -475,16 +478,16 @@ function goFull(){                                          // on phones: go ful
   try{if(!matchMedia('(pointer:coarse)').matches||document.fullscreenElement)return;
     const e=document.documentElement;Promise.resolve(e.requestFullscreen&&e.requestFullscreen()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}
 }
-$('startBtn').onclick=()=>{audio();goFull();go('BOARDING');startMusic();};
+$('startBtn').onclick=()=>{audio();goFull();go('BOARDING');};
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 
 /* ===== TRAIN: logic (top-down) ===== */
-const ROOMS=[{name:'Engine Cab',type:'engine'},{name:'Tender',type:'tender'},{name:'Management',type:'management'},{name:'Canteen',type:'coach'},{name:'General',type:'coach'},{name:'Luggage Van',type:'luggage'},{name:'Cargo Wagon',type:'cargo'}];
+const ROOMS=[{name:'Engine Cab',type:'engine'},{name:'Tender',type:'tender'},{name:'Management',type:'management'},{name:'Canteen',type:'coach'},{name:'General',type:'coach'},{name:'Shovon',type:'coach'},{name:'Snigdha',type:'coach'},{name:'Luggage Van',type:'luggage'},{name:'Cargo Wagon',type:'cargo'}];
 const CARS=ROOMS.map(r=>r.name),N=CARS.length,ix=n=>CARS.indexOf(n);
 const CW=440,GAP=70,FT=112,FB=282,DT=170,DB=226,VH=360,GOLD='#FFD700';
 let VW=400;
 const WORLD_W=N*CW+(N-1)*GAP,cx0=i=>i*(CW+GAP);
-const G={x:cx0(ix('General'))+60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,meetAt:0,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,hold:null,boosts:[],inv:[],fallen:[],pushCd:0,fuelHint:false,clueHint:false,scarf:'#f5f6fa'};
+const G={x:cx0(ix('General'))+60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,meetAt:0,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,hold:null,boosts:[],inv:[],fallen:[],pushCd:0,water:100,fuelHint:false,clueHint:false,scarf:'#f5f6fa'};
 let role='PASSENGER',nearId=null;
 const TASKS=[
   {id:'chai',  icon:'☕',name:'Fill the chai',    car:ix('Canteen'),x:cx0(ix('Canteen'))+120,y:FT+56,type:'hold'},
@@ -492,6 +495,7 @@ const TASKS=[
   {id:'bags',  icon:'🧳',name:'Sort the luggage', car:ix('Luggage Van'),x:cx0(ix('Luggage Van'))+CW-95,y:190,type:'tap'}
 ];
 const TASK_R=64,CLUE_R=52,CHAIN_R=72,FUEL_R=44,BURN_R=64,BURNER={x:cx0(ix('Engine Cab'))+97,y:FT+40},BOARD={x:cx0(ix('Management'))+135,y:FT+40},BOARD_R=70;
+const TANK={x:cx0(ix('Tender'))+355,y:FT+50,type:'tank'},TAP={x:cx0(ix('Canteen'))+312,y:FT+40},BUCKETS=[];   // the water tank (Tender), the tap (Canteen) and two buckets
 const CUPS=[0,1,2].map(k=>({x:cx0(ix('Canteen'))+60+k*42,y:FT+26,state:'empty',value:5}));   // cups on the canteen counter: empty (value 5) or filled (value 15)                         // how close counts as 'around the spot'
 const CH=ROOMS.map((r,i)=>r.type==='coach'?{x:cx0(i)+217,y:FT+30,car:i}:null).filter(Boolean);   // no chain in the engine, tender or cargo wagon      // one emergency chain per carriage
 const FUEL=[];                                                 // fuel on the floor: logs, coal and one canister, each with a value and a speed multiplier
@@ -503,7 +507,7 @@ ROOMS.forEach((r,i)=>{if(r.type!=='coach')return;for(let k=0;k<4;k++){
 OB.push({x:cx0(ix('Canteen'))+30,y:FT+6,w:175,h:30,c:'counter'});
 {const e=ix('Engine Cab'),t=ix('Tender'),c=ix('Cargo Wagon');             // solid things in the new rooms (room: marks them as special)
 OB.push({x:cx0(e)+190,y:FT+6,w:110,h:52,c:'coal',room:e},{x:cx0(e)+330,y:FT+6,w:84,h:44,c:'controls',room:e},{x:cx0(e)+230,y:FB-36,w:64,h:26,c:'seat',room:e},
- {x:cx0(t)+30,y:FT+6,w:170,h:70,c:'heap',room:t},{x:cx0(t)+300,y:FB-50,w:110,h:40,c:'wood',room:t},
+ {x:cx0(t)+36,y:FT+6,w:150,h:46,c:'heap',room:t},{x:cx0(t)+300,y:FB-50,w:110,h:40,c:'wood',room:t},{x:cx0(t)+310,y:FT+6,w:90,h:40,c:'tank',room:t},
  {x:cx0(c)+28,y:FT+8,w:64,h:52,c:'crate',room:c},{x:cx0(c)+104,y:FT+8,w:76,h:38,c:'sack',room:c},{x:cx0(c)+336,y:FT+8,w:46,h:46,c:'barrel',room:c},
  {x:cx0(c)+60,y:FB-58,w:70,h:50,c:'crate',room:c},{x:cx0(c)+260,y:FB-44,w:62,h:36,c:'sack',room:c},{x:cx0(c)+346,y:FB-52,w:58,h:46,c:'crate',room:c});}
 {const m=ix('Management');OB.push({x:cx0(m)+352,y:FT+8,w:18,h:14,c:'npc',room:m},{x:cx0(m)+310,y:FT+22,w:100,h:34,c:'desk',room:m},{x:cx0(m)+118,y:214,w:64,h:50,c:'table',room:m});}
@@ -527,6 +531,9 @@ function nearInter(){
   if(G.hold&&G.hold.mult){const k=d(BURNER.x,BURNER.y);if(k<BURN_R)c.push({k:'burn',icon:'🔥',id:'burn',d:k});}
   if(G.hold&&G.hold.type==='clue'){const k=d(BOARD.x,BOARD.y);if(k<BOARD_R)c.push({k:'board',icon:'📌',id:'board',d:k});}
   if(role==='CHOR'&&G.inv.length<5)LUG.forEach(o=>{if(o.state!=='neat'||o.duty)return;const k=d(o.x+o.w/2,o.by-8);if(k<TASK_R)c.push({k:'steal',obj:o,icon:'🧳',id:'steal'+o.id,d:k});});
+  if(!G.hold)BUCKETS.forEach(bk=>{if(bk.state!=='floor')return;const k=d(bk.x,bk.y);if(k<FUEL_R)c.push({k:'bucket',bk,icon:'🪣',id:'bk'+bk.id,d:k});});
+  if(G.hold&&G.hold.type==='bucket'){const k1=d(TAP.x,TAP.y),k2=d(TANK.x,TANK.y);if(!G.hold.full&&k1<BURN_R)c.push({k:'tap',icon:'🚰',id:'tap',d:k1});if(G.hold.full&&k2<BURN_R)c.push({k:'pour',icon:'💧',id:'pour',d:k2});}
+  if(role==='CHOR'&&G.water>30){const k=d(TANK.x,TANK.y);if(k<BURN_R)c.push({k:'drain',icon:'🚰',id:'drain',d:Math.max(0,k-40)});}   // wins over loose coal lying nearby
   c.sort((a,b)=>a.d-b.d);if(!c.length&&G.hold)return{k:'drop',icon:'✋',id:'drop',d:0};return c[0]||null;                 // if several are in reach, then the nearest one wins
 }
 function update(dt){
@@ -541,7 +548,8 @@ function update(dt){
   BOTS.forEach(b=>{if(b.chor||b.out)return;const c=G.clues.find(c=>Math.hypot(b.x-c.x,b.y-c.y)<30);if(c&&Math.random()<dt*.25)collectClue(c,b.name);});
   G.walk+=m*dt*11;G.t+=dt;G.time-=dt;G.pushCd=Math.max(0,G.pushCd-dt);               // the schedule never waits
   G.boosts=G.boosts.filter(b=>(b.t-=dt)>0);const bm=G.boosts.reduce((m,b)=>Math.max(m,b.m),1);
-  G.journey=Math.min(1,G.journey+dt/148*bm);        // on schedule by default; fuel in the burner speeds the train (strongest active fuel counts); only advances while PLAYING
+  G.water=Math.max(0,G.water-dt*.35);const wm=.6+.4*Math.min(1,G.water/50);   // full speed at 50% water or more, down to 60% speed when empty
+  G.journey=Math.min(1,G.journey+dt/148*bm*wm);        // on schedule by default; fuel in the burner speeds the train (strongest active fuel counts); only advances while PLAYING
 }
 
 
@@ -567,7 +575,7 @@ function askMusic(){                                           // a small note a
 }
 $('musicYes').onclick=()=>{profile.music=true;save();$('musicAsk').hidden=true;startMusic();};
 $('musicNo').onclick=()=>{profile.music=false;save();$('musicAsk').hidden=true;};
-document.addEventListener('visibilitychange',()=>{if(document.hidden)stopMusic();else startMusic();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopMusic();else if(['PLAYING','MEETING','VOTING','EJECTION'].includes(state))startMusic();});
 let AC=null;
 function audio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}return AC;}
 function siren(){                                          // about 1.7 seconds, a rising and falling wail, made in code (no sound files)
@@ -589,6 +597,10 @@ function refreshBoard(){
 }
 function commitCrime(b){                                  // the Chor takes a real object
   const o=b.target;if(!o){b.nextCrime=G.t+15;return;}
+  if(o.type==='tank'){                                    // drain the water tank
+    if(G.water<=30||Math.hypot(b.x-o.x,b.y-196)>110){b.nextCrime=G.t+15;return;}
+    G.water=10;G.clues.push({id:++G.cid,x:o.x+(Math.random()*30-15),y:196+(Math.random()*12-6),col:b.scarf});
+    if(!G.alarm){G.alarm=true;refreshBoard();banner('🚨 A Chor is aboard!');juice('alarm');}else banner('💧 The water tank was drained!');return;}
   if(o.type==='can'){                                     // the only canister: once it is gone nobody can get the x1.7 boost
     if(o.state!=='floor'||Math.hypot(b.x-o.x,b.y-o.y)>90){b.nextCrime=G.t+15;return;}
     o.state='stolen';(b.inv=b.inv||[]).push({type:'canister',id:o.id,value:o.value});
@@ -610,17 +622,17 @@ function collectClue(c,who){                              // if a crew member ex
 let BOTS=[];
 function pickGoal(b){
   if(b.chor&&!b.crime&&!b.chase&&G.t>=b.nextCrime){const pool=LUG.filter(o=>o.state==='neat'&&!o.duty),can=FUEL.find(f=>f.type==='can'&&f.state==='floor');   // it targets a real object
-    const o=can&&(Math.random()<.35||!pool.length)?can:pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
-    if(o){const gx=o.type?o.x:o.x+o.w/2,gy=o.type?o.y:196;b.target=o;b.goal={x:gx,y:gy,icon:''};b.tx=gx;b.ty=gy;b.stage=0;b.crime=true;return;}b.nextCrime=G.t+25;}   // looks like a normal luggage duty
+    const o=(G.water>30&&Math.random()<.25)?TANK:can&&(Math.random()<.35||!pool.length)?can:pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
+    if(o){const gx=o.type?o.x:o.x+o.w/2,gy=(o.type&&o.type!=='tank')?o.y:196;b.target=o;b.goal={x:gx,y:gy,icon:''};b.tx=gx;b.ty=gy;b.stage=0;b.crime=true;return;}b.nextCrime=G.t+25;}   // looks like a normal luggage duty
   const g=GOALS[Math.floor(Math.random()*GOALS.length)];
   b.goal=g;b.tx=g.x;b.ty=g.y;b.stage=0;
 }
 function initBots(){
   const free=COLORS.map((_,i)=>i).filter(i=>i!==profile.color);
   BOTS=BOT_NAMES.map((name,i)=>{
-    const b={name,col:free[i],x:cx0(ix('Canteen')+i%3)+90+i*25,y:196,face:1,walk:Math.random()*6,moving:0,wait:Math.random()*3,doing:'',stuck:0,scarf:SCARF[Math.floor(Math.random()*SCARF.length)],chor:false,nextCrime:1e9,crime:false,nextPush:1e9,chase:null,aim:0,chaseT:0};
+    const b={name,col:free[i],x:START+90+i*25,y:196,face:1,walk:Math.random()*6,moving:0,wait:Math.random()*3,doing:'',stuck:0,scarf:SCARF[Math.floor(Math.random()*SCARF.length)],chor:false,nextCrime:1e9,crime:false,nextPush:1e9,chase:null,aim:0,chaseT:0};
     pickGoal(b);return b;});
-  if(role==='PASSENGER'){const c=BOTS[Math.floor(Math.random()*BOTS.length)];c.chor=true;c.nextCrime=12+Math.random()*10;c.x=cx0(ix('Luggage Van'))+110;c.y=196;}   // one bot is secretly the Chor
+  if(role==='PASSENGER'){const c=BOTS[Math.floor(Math.random()*BOTS.length)];c.chor=true;c.nextCrime=12+Math.random()*10;}   // one bot is secretly the Chor
 }
 function spotTaken(b){const g=b.goal;if(!g.icon)return false;
   if(BOTS.some(o=>o!==b&&!o.out&&o.doing===g.icon&&Math.hypot(o.x-g.x,o.y-g.y)<50))return true;   // another bot is already there
@@ -686,7 +698,7 @@ function initFuel(){                                          // random amounts,
   FUEL.length=0;const R=(a,b)=>a+Math.random()*(b-a),tx=cx0(ix('Tender')),cw=cx0(ix('Cargo Wagon'));
   const add=(type,x,y)=>FUEL.push({id:FUEL.length,type,x,y,rot:type==='log'?R(0,6.28):R(-.3,.3),flip:Math.random()<.5,state:'floor',mult:FUEL_DEF[type].mult,value:FUEL_DEF[type].value});
   for(let k=0,n=3+Math.floor(Math.random()*4);k<n;k++){const a=Math.random()<.6;add('log',tx+(a?R(215,295):R(300,405)),a?R(205,262):R(204,224));}
-  for(let k=0,n=3+Math.floor(Math.random()*4);k<n;k++)add('coal',tx+R(40,210),R(200,238));
+  for(let k=0,n=3+Math.floor(Math.random()*4);k<n;k++)add('coal',tx+R(40,190),R(200,238));
   const sp=[[200,212],[290,150],[180,250]][Math.floor(Math.random()*3)];add('can',cw+sp[0],sp[1]);
 }
 function fuelSprite(type,x,y,sc,rot,flip){
@@ -694,7 +706,7 @@ function fuelSprite(type,x,y,sc,rot,flip){
   const dw=(type==='log'?36:type==='coal'?34:22)*sc,dh=dw*img.naturalHeight/img.naturalWidth;
   cx.save();cx.translate(x,y);cx.rotate(rot);if(flip)cx.scale(-1,1);cx.drawImage(img,-dw/2,-dh/2,dw,dh);cx.restore();
 }
-function drawFuel(f,camx){const x=f.x-camx;if(x<-40||x>VW+40)return;cx.fillStyle='rgba(0,0,0,.28)';cx.beginPath();cx.ellipse(x,f.y+7,11,4,0,0,7);cx.fill();fuelSprite(f.type,x,f.y,1,f.rot,f.flip);}
+function drawFuel(f,camx){const x=f.x-camx;if(x<-40||x>VW+40)return;fuelSprite(f.type,x,f.y,1,f.rot,f.flip);}
 const PUSH_R=44;                                               // about two crew-widths
 const nearestBot=r=>BOTS.filter(b=>!b.out).map(b=>({b,d:Math.hypot(b.x-G.x,b.y-G.y)})).filter(o=>o.d<r).sort((a,b)=>a.d-b.d).map(o=>o.b)[0];
 function refreshInv(){$('inv').innerHTML=Array.from({length:5},(_,k)=>'<i>'+(G.inv[k]?G.inv[k].icon:'')+'</i>').join('');}
@@ -738,6 +750,24 @@ function chorAI(dt){                                            // the bot Chor 
   if(c.aim<=0){c.aim=.8;c.goal={x:vx,y:vy,icon:''};c.tx=vx;c.ty=vy;c.stage=0;c.wait=0;c.doing='';}
 }
 function drawThread(x,y,col){cx.strokeStyle=col;cx.lineWidth=2.5;cx.beginPath();cx.moveTo(x-7,y+3);cx.bezierCurveTo(x-3,y-5,x+1,y+7,x+7,y-1);cx.stroke();cx.fillStyle='rgba(255,255,255,.75)';cx.beginPath();cx.arc(x-7,y+3,2,0,7);cx.fill();}
+function initWater(){G.water=100;BUCKETS.length=0;const c0=cx0(ix('Canteen'));[288,340].forEach((dx,i)=>BUCKETS.push({id:i,type:'bucket',x:c0+dx,y:166,full:false,state:'floor'}));}
+function pickBucket(b){b.state='held';G.hold=b;}
+function fillBucket(){if(G.hold&&G.hold.type==='bucket')G.hold.full=true;}
+function pourBucket(){const b=G.hold;if(!b||!b.full)return;b.full=false;G.water=Math.min(100,G.water+35);banner('💧 Water tank at '+Math.round(G.water)+'%','info');}
+function drainTank(){                                            // the Chor empties the tank: the train slows down
+  if(G.water<=30)return;G.water=10;
+  G.clues.push({id:++G.cid,x:TANK.x+(Math.random()*30-15),y:196+(Math.random()*12-6),col:G.scarf});
+  if(!G.alarm){G.alarm=true;refreshBoard();banner('🚨 A Chor is aboard!');juice('alarm');}else banner('💧 The water tank was drained!');
+}
+function drawBucket(x,y,full){
+  cx.fillStyle='#7d8795';cx.beginPath();cx.moveTo(x-8,y-12);cx.lineTo(x+8,y-12);cx.lineTo(x+6,y+2);cx.lineTo(x-6,y+2);cx.closePath();cx.fill();
+  cx.fillStyle=full?'#4aa3ff':'#2b2f3a';cx.beginPath();cx.ellipse(x,y-12,8,3,0,0,7);cx.fill();
+  cx.strokeStyle='#c9ced8';cx.lineWidth=1.5;cx.beginPath();cx.arc(x,y-12,8,3.4,6.0);cx.stroke();
+}
+function drawWater(camx){
+  const tx=TAP.x-camx;if(tx>-30&&tx<VW+30){cx.fillStyle='#9aa3b2';cx.fillRect(tx-3,76,6,18);cx.fillRect(tx-3,90,15,5);cx.fillStyle='#c9ced8';cx.fillRect(tx+9,95,5,4);cx.fillStyle='#4aa3ff';cx.fillRect(tx+11,100+((G.t*26)%9),2,3);}
+  BUCKETS.filter(b=>b.state==='floor').forEach(b=>{const x=b.x-camx;if(x>-20&&x<VW+20)drawBucket(x,b.y,b.full);});
+}
 function pickClue(c){G.clues=G.clues.filter(x=>x!==c);G.hold={type:'clue',clue:c,col:c.col};if(!G.clueHint){G.clueHint=true;banner('Carry it to the clue board in Management','info');}}
 function pinClue(){const h=G.hold;if(!h||h.type!=='clue')return;G.board.push({id:h.clue.id,col:h.clue.col,car:carOf(h.clue.x)});G.hold=null;refreshBoard();banner('📌 Pinned to the clue board','info');}
 function drawCups(camx){                                       // the cups on the counter; the Fill the chai duty fills one
@@ -762,7 +792,7 @@ function drawLug(o,camx){
   const sx=o.x-camx;if(sx<-110||sx>VW+110)return;
   const st=o.duty&&G.done[o.duty]?'neat':o.state,img=st==='messy'?IMG.messy:IMG.neat;if(!img.complete||!img.naturalWidth)return;
   const dw=st==='messy'?92:46,dh=dw*img.naturalHeight/img.naturalWidth,ox=sx+(o.w-dw)/2;
-  cx.fillStyle='rgba(0,0,0,.32)';cx.beginPath();cx.ellipse(sx+o.w/2,o.by-4,dw*.55,6,0,0,7);cx.fill();
+  
   cx.drawImage(img,ox,o.by-dh,dw,dh);
   cx.fillStyle=o.owner.col;cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.beginPath();cx.arc(ox+dw-4,o.by-dh+10,5,0,7);cx.fill();cx.stroke();   // the owner's colour tag
 }
@@ -806,10 +836,7 @@ function drawSpecial(i,x0,T){
     const gl=cx.createRadialGradient(x0+97,FT+6,6,x0+97,FT+6,240);gl.addColorStop(0,'rgba(255,130,30,'+(.36*fl)+')');gl.addColorStop(1,'rgba(255,130,30,0)');
     cx.fillStyle=gl;cx.fillRect(x0+8,FT,CW-16,FB-FT);
   }else if(T==='tender'){
-    cx.fillStyle='#2b4a6b';cx.beginPath();cx.roundRect(x0+40,72,170,34,10);cx.fill();cx.fillStyle='rgba(255,255,255,.18)';cx.fillRect(x0+50,76,150,4);
-    cx.strokeStyle='#3a6a9a';cx.lineWidth=3;cx.beginPath();cx.roundRect(x0+40,72,170,34,10);cx.stroke();
-    cx.fillStyle='#1a1d28';cx.beginPath();cx.arc(x0+125,91,8,0,7);cx.fill();
-    cx.strokeStyle='#8a8aa5';cx.lineWidth=3;cx.beginPath();cx.moveTo(x0+340,68);cx.lineTo(x0+340,110);cx.moveTo(x0+362,68);cx.lineTo(x0+362,110);for(let r=76;r<110;r+=10){cx.moveTo(x0+340,r);cx.lineTo(x0+362,r);}cx.stroke();
+    
     cx.fillStyle='rgba(255,235,200,.06)';cx.fillRect(x0+8,FT,CW-16,FB-FT);
   }else if(T==='cargo'){
     cx.fillStyle='rgba(110,140,255,.08)';cx.fillRect(x0+8,FT,CW-16,FB-FT);cx.fillStyle='rgba(255,235,200,.06)';cx.fillRect(x0+8,FT,CW-16,FB-FT);
@@ -829,9 +856,18 @@ function drawSpecial(i,x0,T){
     cx.fillStyle='rgba(255,235,200,.08)';cx.fillRect(x0+8,FT,CW-16,FB-FT);
   }
   OB.filter(o=>o.room===i).forEach(o=>{const x=o.x-camx,y=o.y,w=o.w,h=o.h;
-    if((o.c==='coal'||o.c==='heap')&&IMG.coal.complete&&IMG.coal.naturalWidth){const dw=w*1.1,dh=dw*IMG.coal.naturalHeight/IMG.coal.naturalWidth;cx.fillStyle='rgba(0,0,0,.35)';cx.beginPath();cx.ellipse(x+w/2,y+h,dw*.5,8,0,0,7);cx.fill();cx.drawImage(IMG.coal,x+(w-dw)/2,y+h-dh+6,dw,dh);return;}
+    if((o.c==='coal'||o.c==='heap')&&IMG.coal.complete&&IMG.coal.naturalWidth){const dw=w*1.1,dh=dw*IMG.coal.naturalHeight/IMG.coal.naturalWidth;cx.drawImage(IMG.coal,x+(w-dw)/2,y+h-dh+6,dw,dh);return;}
     if(o.c==='wood'&&IMG.log.complete&&IMG.log.naturalWidth){for(let k=0;k<6;k++)fuelSprite('log',x+24+(k%3)*34,y+h-8-Math.floor(k/3)*15,1.05,k%2?.06:-.05,false);return;}
-    if(o.c==='crate'&&IMG.crate.complete&&IMG.crate.naturalWidth){const dw=w*1.1,dh=dw*IMG.crate.naturalHeight/IMG.crate.naturalWidth;cx.fillStyle='rgba(0,0,0,.3)';cx.beginPath();cx.ellipse(x+w/2,y+h,dw*.5,6,0,0,7);cx.fill();cx.drawImage(IMG.crate,x+(w-dw)/2,y+h-dh+4,dw,dh);return;}
+    if(o.c==='crate'&&IMG.crate.complete&&IMG.crate.naturalWidth){const dw=w*1.1,dh=dw*IMG.crate.naturalHeight/IMG.crate.naturalWidth;cx.drawImage(IMG.crate,x+(w-dw)/2,y+h-dh+4,dw,dh);return;}
+    if(o.c==='tank'){                                              // the water tank: a steel tank on the floor with a glass level gauge
+      const bh=62,top=y+h-bh,lv=G.water/100;
+      cx.fillStyle='#4a5868';cx.fillRect(x+6,top,w-12,bh);cx.fillStyle='#66788d';cx.fillRect(x+10,top,12,bh);cx.fillStyle='#7f90a6';cx.fillRect(x+24,top,5,bh);
+      cx.fillStyle='#2f3947';cx.fillRect(x+6,top+16,w-12,5);cx.fillRect(x+6,top+bh-18,w-12,5);
+      cx.fillStyle='#7f90a6';cx.beginPath();cx.ellipse(x+w/2,top,(w-12)/2,8,0,0,7);cx.fill();cx.fillStyle='#202833';cx.beginPath();cx.ellipse(x+w/2-6,top,9,3.5,0,0,7);cx.fill();   // lid with a filling funnel
+      cx.fillStyle='#0f1720';cx.fillRect(x+w-26,top+8,12,bh-16);cx.fillStyle='#4aa3ff';cx.fillRect(x+w-24,top+8+(bh-20)*(1-lv),8,(bh-20)*lv);cx.strokeStyle='#dfe7f2';cx.lineWidth=1.5;cx.strokeRect(x+w-26,top+8,12,bh-16);
+      cx.fillStyle='#fff';cx.font="11px 'Fredoka One',sans-serif";cx.fillText(Math.round(G.water)+'%',x+w/2-8,top+bh-24);cx.font="8px 'Fredoka One',sans-serif";cx.fillText('WATER',x+w/2-8,top+bh-34);
+      cx.fillStyle='#c9a24a';cx.fillRect(x+10,y+h-8,12,6);                                   // the valve
+      return;}
     if(o.c==='npc'){npcDraw(x+9,y+20);return;}
     if(o.c==='desk'){cx.fillStyle='#2f1f10';cx.fillRect(x,y+8,w,h);cx.fillStyle='#7a5230';cx.fillRect(x,y,w,h);cx.fillStyle='#4a3018';cx.fillRect(x+4,y+4,w-8,h-14);cx.fillStyle='#2a2a46';cx.fillRect(x+w-30,y+6,22,10);cx.fillStyle='#ffd98a';cx.fillRect(x+w-26,y+9,14,3);return;}
     if(o.c==='table'){const cxm=x+w/2,cym=y+h/2;[[-42,0],[42,0],[0,-30],[0,30]].forEach(([a,b])=>{cx.fillStyle='#3a2a1a';cx.beginPath();cx.arc(cxm+a,cym+b,8,0,7);cx.fill();});cx.fillStyle='#2a1c0e';cx.beginPath();cx.ellipse(cxm,cym+6,w/2+2,h/2,0,0,7);cx.fill();cx.fillStyle='#8a5a2b';cx.beginPath();cx.ellipse(cxm,cym,w/2+2,h/2-2,0,0,7);cx.fill();cx.strokeStyle='#5a3a1c';cx.lineWidth=3;cx.stroke();return;}
@@ -850,10 +886,10 @@ function drawSpecial(i,x0,T){
       cx.fillStyle='#3d2c18';cx.fillRect(x,y+5,w,h);cx.fillStyle='#8a6a3a';cx.fillRect(x,y,w,h);cx.strokeStyle='#5a4326';cx.lineWidth=3;cx.strokeRect(x+2,y+2,w-4,h-4);
       cx.beginPath();cx.moveTo(x+2,y+2);cx.lineTo(x+w-2,y+h-2);cx.moveTo(x+w-2,y+2);cx.lineTo(x+2,y+h-2);cx.stroke();
     }else if(o.c==='sack'){
-      cx.fillStyle='#6f5d3a';cx.beginPath();cx.ellipse(x+w/2,y+h/2+4,w/2,h/2,0,0,7);cx.fill();cx.fillStyle='#b59d6a';cx.beginPath();cx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,7);cx.fill();
+      cx.fillStyle='#b59d6a';cx.beginPath();cx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,7);cx.fill();
       cx.strokeStyle='#8a7548';cx.lineWidth=2;cx.beginPath();cx.moveTo(x+w/2-8,y+h/2);cx.lineTo(x+w/2+8,y+h/2);cx.stroke();
     }else if(o.c==='barrel'){
-      cx.fillStyle='#2a1c0e';cx.beginPath();cx.arc(x+w/2,y+h/2+4,w/2,0,7);cx.fill();cx.fillStyle='#6b4a2b';cx.beginPath();cx.arc(x+w/2,y+h/2,w/2,0,7);cx.fill();
+      cx.fillStyle='#6b4a2b';cx.beginPath();cx.arc(x+w/2,y+h/2,w/2,0,7);cx.fill();
       cx.strokeStyle='#3d2a15';cx.lineWidth=3;cx.beginPath();cx.arc(x+w/2,y+h/2,w/2-7,0,7);cx.stroke();
     }
   });
@@ -909,7 +945,7 @@ function draw(){
   TASKS.forEach(t=>{const sx=t.x-camx;if(sx<-20||sx>VW+20)return;
     if(G.done[t.id]){cx.fillStyle='#2ED573';cx.beginPath();cx.arc(sx,t.y-(t.type==='drag'?86:44),9,0,7);cx.fill();cx.fillStyle='#fff';cx.font="13px Nunito,sans-serif";cx.fillText('✓',sx,t.y-(t.type==='drag'?81:39));}
     else{const by=t.y-(t.type==='drag'?88:46)+Math.sin(G.t*4)*3;cx.fillStyle=GOLD;cx.beginPath();cx.moveTo(sx-9,by-8);cx.lineTo(sx+9,by-8);cx.lineTo(sx,by+5);cx.fill();}});
-  drawCups(camx);FUEL.filter(f=>f.state==='floor').forEach(f=>drawFuel(f,camx));
+  drawCups(camx);drawWater(camx);FUEL.filter(f=>f.state==='floor').forEach(f=>drawFuel(f,camx));
   LUG.filter(o=>o.state==='stolen').forEach(o=>drawMark(o,camx));LUG.filter(o=>o.state!=='stolen'&&o.by<=G.y).forEach(o=>drawLug(o,camx));
   BOTS.filter(b=>b.y<G.y).forEach(b=>drawBot(b,camx));
   const px=G.x-camx,bob=G.moving?Math.abs(Math.sin(G.walk))*3:0,sq=G.moving?1+.07*Math.sin(G.walk*2):1;
@@ -921,7 +957,7 @@ function draw(){
   cx.fillStyle='#fff';cx.beginPath();cx.arc(G.face*4-3,-39,2.5,0,7);cx.arc(G.face*4+3,-39,2.5,0,7);cx.fill();
   cx.restore();
   cx.fillStyle='#fff';cx.font="12px Nunito,sans-serif";cx.fillText(profile.name||'You',px,G.y-60);
-  if(G.hold){if(G.hold.type==='clue')drawThread(px+G.face*14,G.y-26-bob,G.hold.col);else fuelSprite(G.hold.type,px+G.face*14,G.y-26-bob,.95,G.hold.type==='log'?.35:0,false);}   // carried in the hand
+  if(G.hold){if(G.hold.type==='clue')drawThread(px+G.face*14,G.y-26-bob,G.hold.col);else if(G.hold.type==='bucket')drawBucket(px+G.face*14,G.y-18-bob,G.hold.full);else fuelSprite(G.hold.type,px+G.face*14,G.y-26-bob,.95,G.hold.type==='log'?.35:0,false);}   // carried in the hand
   BOTS.filter(b=>b.y>=G.y).forEach(b=>drawBot(b,camx));
   LUG.filter(o=>o.state!=='stolen'&&o.by>G.y).forEach(o=>drawLug(o,camx));
   const vg=cx.createRadialGradient(VW/2,VH/2,130,VW/2,VH/2,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.28)');
@@ -947,7 +983,7 @@ stick.onpointerdown=e=>{e.preventDefault();sid=e.pointerId;stick.setPointerCaptu
 stick.onpointermove=e=>{if(e.pointerId===sid)stickMove(e);};
 stick.onpointerup=stick.onpointercancel=resetStick;
 $('pushBtn').onclick=()=>pushNow();
-$('useBtn').onclick=()=>{const n=nearInter();if(!n||G.busy||n.busy)return;if(n.k==='task')openTask(n.t);else if(n.k==='clue')pickClue(n.c);else if(n.k==='board')pinClue();else if(n.k==='steal')chorSteal(n.obj);else if(n.k==='fuel')pickFuel(n.f);else if(n.k==='burn')burnFuel();else if(n.k==='drop')dropFuel();else{G.chainUsed=true;go('MEETING');}};
+$('useBtn').onclick=()=>{const n=nearInter();if(!n||G.busy||n.busy)return;if(n.k==='task')openTask(n.t);else if(n.k==='clue')pickClue(n.c);else if(n.k==='board')pinClue();else if(n.k==='steal')chorSteal(n.obj);else if(n.k==='bucket')pickBucket(n.bk);else if(n.k==='tap')fillBucket();else if(n.k==='pour')pourBucket();else if(n.k==='drain')drainTank();else if(n.k==='fuel')pickFuel(n.f);else if(n.k==='burn')burnFuel();else if(n.k==='drop')dropFuel();else{G.chainUsed=true;go('MEETING');}};
 function resize(){                                          // canvas fills the screen; the world is scaled to the screen height
   const r=cv.getBoundingClientRect();if(!r.width||!r.height)return;
   const dpr=Math.min(window.devicePixelRatio||1,2);cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);VW=r.width*VH/r.height;
@@ -963,6 +999,7 @@ function tick(now){
   if(id!==nearId){nearId=id;const u=$('useBtn');u.disabled=!n||!!n.busy;u.firstElementChild.textContent=n?n.icon:'🛠️';u.lastElementChild.textContent='USE';}
   $('barFill').style.width=(G.journey*100)+'%';$('pin').style.left=(G.journey*100)+'%';
   const bo=G.boosts.reduce((a,x)=>!a||x.m>a.m?x:a,null),bt=$('boostTxt');if(bo){bt.hidden=false;bt.textContent='🔥 ×'+bo.m.toFixed(1)+'   '+Math.ceil(bo.t)+'s';}else bt.hidden=true;
+  {const w=$('waterTxt'),lv=G.water;if(lv<50){w.hidden=false;w.textContent=lv<25?'💧 Water very low':'💧 Water low';w.style.color=lv<25?'#ff6b6b':'#ffb84a';}else w.hidden=true;}
   if(role==='CHOR'){const t=nearestBot(PUSH_R),pb=$('pushBtn');pb.disabled=!t||G.pushCd>0;pb.lastElementChild.textContent=G.pushCd>0?Math.ceil(G.pushCd)+'s':'PUSH';}
   $('clockTxt').textContent=fmt(Math.max(0,G.time));$('clockBox').classList.toggle('low',G.time<30);
   if(G.journey>=1){raf=0;return end(true);}          // if the train reaches Nayanpur, then passengers arrive
@@ -1020,11 +1057,13 @@ function refreshTasks(){
   $('taskTxt').textContent='TASKS '+n+'/'+TASKS.length;
   $('taskList').innerHTML=TASKS.map(t=>'<li class="'+(G.done[t.id]?'done':'')+'"><span>'+(G.done[t.id]?'✅':t.icon)+'</span>'+t.name+'<small>'+CARS[t.car]+'</small></li>').join('');
 }
+let START=0;
+function pickStart(){START=cx0(ix(['General','Shovon','Snigdha'][Math.floor(Math.random()*3)]));return START;}   // everyone launches in the same passenger coach
 function resetGame(){
   closePanel();
-  Object.assign(G,{x:cx0(ix('General'))+60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,hold:null,boosts:[],inv:[],fallen:[],pushCd:0,fuelHint:false,clueHint:false,scarf:SCARF[Math.floor(Math.random()*SCARF.length)]});
+  const sx=pickStart();Object.assign(G,{x:sx+60,y:196,face:1,walk:0,moving:0,t:0,dx:0,dy:0,journey:0,time:150,done:{},busy:null,chainUsed:false,clues:[],cid:0,board:[],alarm:false,chorGone:false,hold:null,boosts:[],inv:[],fallen:[],pushCd:0,water:100,fuelHint:false,clueHint:false,scarf:SCARF[Math.floor(Math.random()*SCARF.length)]});
   role=/crew/i.test(location.search)?'PASSENGER':(/chor/i.test(location.search)||Math.random()<1/6)?'CHOR':'PASSENGER';   // random: one of the six is the Chor (so about 1 game in 6 you are); add ?chor or ?crew to the address to force it
-  nearId=0;initBots();initLuggage();initFuel();G.gid=(G.gid||0)+1;askedMusic=false;$('pushBtn').hidden=role!=='CHOR';$('inv').hidden=role!=='CHOR';refreshInv();refreshFallen();refreshTasks();refreshBoard();$('banner').hidden=true;
+  nearId=0;initBots();initLuggage();initFuel();initWater();G.gid=(G.gid||0)+1;askedMusic=false;$('pushBtn').hidden=role!=='CHOR';$('inv').hidden=role!=='CHOR';refreshInv();refreshFallen();refreshTasks();refreshBoard();$('banner').hidden=true;
 }
 function showRole(){
   const c=role==='CHOR';
@@ -1123,7 +1162,7 @@ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWor
 function paintPrev(){$('avPrev').innerHTML='<div class="fig" style="--c:'+COLORS[profile.color]+'"><i class="hd"></i><i class="bd"><u style="background:#f5f6fa"></u></i></div>';}
 const tgM=$('tgMusic'),tgS=$('tgSfx'),vol=$('musicVol');
 function paintSettings(){tgM.textContent=profile.music===true?'ON':'OFF';tgM.classList.toggle('off',profile.music!==true);tgS.textContent=profile.mute?'OFF':'ON';tgS.classList.toggle('off',!!profile.mute);vol.value=Math.round((profile.musicVol!==undefined?profile.musicVol:MUSIC_VOL)*100);}
-tgM.onclick=()=>{profile.music=!(profile.music===true);save();if(profile.music){audio();startMusic();}else stopMusic();paintSettings();};
+tgM.onclick=()=>{profile.music=!(profile.music===true);save();if(profile.music)audio();else stopMusic();paintSettings();};
 tgS.onclick=()=>{profile.mute=!profile.mute;save();if(!profile.mute)audio();paintSettings();};
 vol.oninput=()=>{profile.musicVol=vol.value/100;save();if(MUS)MUS.volume=profile.musicVol;};
 go('LOBBY');
